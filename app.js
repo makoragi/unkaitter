@@ -1,3 +1,5 @@
+var http = require('http');
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
@@ -56,5 +58,11 @@ app.use(function(err, req, res, next) {
   });
 });
 
+
+app.get('/', routes);
+
+http.createServer(app).listen(process.env.PORT, process.env.IP, function(){
+  console.log('Server running on port ' + process.env.PORT);
+});
 
 module.exports = app;
