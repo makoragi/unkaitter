@@ -19,7 +19,7 @@ new CronJob({
 	onTick: function() {
 		tweet();
 
-		var picStream = fs.createWriteStream('public/images/img.jpg');
+		var picStream = fs.createWriteStream('/tmp/img.jpg');
 		picStream.on('close', function(){
 			console.log('file done.');
 		});
