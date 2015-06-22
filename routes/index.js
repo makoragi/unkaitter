@@ -11,14 +11,15 @@ router.get('/', function(req, res, next) {
   res.render('index', { title: 'Unkaitter' });
 });
 
-var cronTime = '0 0 7 * * *';
+//var cronTime = '0 0 7 * * *';
+var cronTime = '0 * * * * *';
 
 new CronJob({
 	cronTime: cronTime,
 	onTick: function() {
 		tweet();
 
-		var picStream = fs.createWriteStream('img.jpg');
+		var picStream = fs.createWriteStream('public/images/img.jpg');
 		picStream.on('close', function(){
 			console.log('file done.');
 		});
