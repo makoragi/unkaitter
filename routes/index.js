@@ -8,18 +8,21 @@ var request = require('request');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Unkaitter' });
+  // res.render('index', { title: 'Unkaitter' });
+  res.render('index', {
+  	title: 'Unkaitter',
+  	message: cronTime
+  });
 });
 
-//var cronTime = '0 0 7 * * *';
-var cronTime = '0 * * * * *';
+var cronTime = process.env.cron || '0 0 7 * * *';
 
 new CronJob({
 	cronTime: cronTime,
 	onTick: function() {
 		tweet();
 
-		var picStream = fs.createWriteStream('/tmp/img.jpg');
+		var picStream = fs.createWriteStream(process.env.tempdir + '/img.jpg');
 		picStream.on('close', function(){
 			console.log('file done.');
 		});
