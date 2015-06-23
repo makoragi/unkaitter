@@ -25,7 +25,7 @@ router.get('/', function(req, res, next) {
   });
 });
 
-var cronTime = process.env.cron || '0 0 7 * * *';
+var cronTime = process.env.cron || '0 0 6-10 * * *';
 
 var tempfile = process.env.tempdir + '/img.jpg';
 
