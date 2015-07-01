@@ -2,9 +2,11 @@ var express = require('express');
 var router = express.Router();
 
 var CronJob = require('cron').CronJob;
+var CronJobWet = require('cron').CronJob;
 var moment = require('moment');
 var fs = require('fs');
 var request = require('request');
+var cheerio = require('cheerio');
 
 var Tumblr = require('tumblrwks');
 var tumblr = new Tumblr(
@@ -35,6 +37,7 @@ router.get('/', function(req, res, next) {
 });
 
 var cronTime = process.env.cron || '0 0 6-10 * * *';
+var cronTimeWet = process.env.cronWet || '0 0 6-10 * * *';
 
 var tempfile = process.env.tempdir + '/img.jpg';
 
@@ -45,38 +48,8 @@ new CronJob({
 
 		var picStream = fs.createWriteStream(tempfile);
 		picStream.on('close', function(){
-
-			tumblr.post('/post',
-			  {
-			    type: 'photo',
-			    data: [ fs.readFileSync(tempfile) ]
-			  }, function(err, json) {
-			    if (!err) {
-			      console.log(json);
-			    } else {
-			      console.error(err);
-			    }
-			  }
-			);
-
-			Tw.post('media/upload',
-				{
-					media_data: [ fs.readFileSync(tempfile, { encoding: 'base64' }) ]
-				},
-				function(err, data, response){
-					if (!err) {
-						var mediaIdStr = data.media_id_string;
-						var params = {
-							status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。"),
-							media_ids: [mediaIdStr]
-						};
-						Tw.post('statuses/update', params, function(err, data, response){
-							// console.log(data);
-						});
-					} else {
-						console.error(err);
-					}
-				});
+			tumblr_image();
+			tweet_image();
 		});
 
 		picStream.on('error', function(err){
@@ -88,12 +61,69 @@ new CronJob({
 	start: true
 });
 
+var urlWet = "http://www.tenki.jp/amedas/9/46/86156.html";
+new CronJobWet({
+	cronTime: cronTimeWet,
+	onTick: function() {
+		tweet();
+
+		request({url: urlWet}, function(err, res, body) {
+			if (!err && res.statusCode == 200) {
+				var $ = cheerio.load(body);
+				$("table[class=amedas_table_current]").first().children().each(function(){
+					//
+					console.log($(this).children());
+				});
+			}
+		});
+		console.log("fin.");
+	},
+	start: true
+});
+
 function tweet() {
 	var message = moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。");
 	console.log(message);
 	// Tw.post('statuses/update', { status: message }, function(err, data, response){
 	// 	console.log('Tweet!');
 	// });
+}
+
+function tumblr_image() {
+	tumblr.post('/post',
+	  {
+	    type: 'photo',
+	    data: [ fs.readFileSync(tempfile) ]
+	  }, function(err, json) {
+	    if (!err) {
+	      console.log(json);
+	    } else {
+	      console.error(err);
+	    }
+	  }
+	);
+}
+
+function tweet_image() {
+	Tw.post('media/upload',
+		{
+			media_data: [ fs.readFileSync(tempfile, { encoding: 'base64' }) ]
+		},
+		function(err, data, response){
+			if (!err) {
+				var mediaIdStr = data.media_id_string;
+				var params = {
+					status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。"),
+					media_ids: [mediaIdStr]
+				};
+				Tw.post('statuses/update', params, function(err, data, response){
+					// console.log(data);
+				});
+			} else {
+				console.error(err);
+			}
+		}
+	);
 }
 
 module.exports = router;
