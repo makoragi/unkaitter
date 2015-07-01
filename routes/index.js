@@ -16,6 +16,15 @@ var tumblr = new Tumblr(
   }, 'unkaitter.tumblr.com'
 );
 
+var Twit = require('twit');
+// var Twit = require('twitter');
+var Tw = new Twit({
+    consumer_key: process.env.twitterConsumerKey,
+    consumer_secret: process.env.twitterConsumerSecret,
+    access_token: process.env.twitterAccessToken,
+    access_token_secret: process.env.twitterAccessSecret
+});
+
 /* GET home page. */
 router.get('/', function(req, res, next) {
   // res.render('index', { title: 'Unkaitter' });
@@ -37,11 +46,10 @@ new CronJob({
 		var picStream = fs.createWriteStream(tempfile);
 		picStream.on('close', function(){
 
-			var photo = fs.readFileSync(tempfile);
 			tumblr.post('/post',
 			  {
 			    type: 'photo',
-			    data: [photo]
+			    data: [ fs.readFileSync(tempfile) ]
 			  }, function(err, json) {
 			    if (!err) {
 			      console.log(json);
@@ -50,7 +58,27 @@ new CronJob({
 			    }
 			  }
 			);
+
+			Tw.post('media/upload',
+				{
+					media_data: [ fs.readFileSync(tempfile, { encoding: 'base64' }) ]
+				},
+				function(err, data, response){
+					if (!err) {
+						var mediaIdStr = data.media_id_string;
+						var params = {
+							status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。"),
+							media_ids: [mediaIdStr]
+						};
+						Tw.post('statuses/update', params, function(err, data, response){
+							// console.log(data);
+						});
+					} else {
+						console.error(err);
+					}
+				});
 		});
+
 		picStream.on('error', function(err){
 			console.error(err);
 		});
@@ -63,6 +91,9 @@ new CronJob({
 function tweet() {
 	var message = moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。");
 	console.log(message);
+	// Tw.post('statuses/update', { status: message }, function(err, data, response){
+	// 	console.log('Tweet!');
+	// });
 }
 
 module.exports = router;
