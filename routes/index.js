@@ -131,7 +131,7 @@ function tweet_image() {
 				var params = {
 					// status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。"),
 					status: '現在の気温' + temp[0] + '℃ '
-						+ '24H以内の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
+						+ '本日の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
 						+ '現在の風速' + wind[0] + 'm/s '
 						+ '現在の降水量' + rain[1] + 'mm '
 						+ moment().utc().add(9, 'h').format("MM月DD日 HH時mm分"),
@@ -193,7 +193,7 @@ function tweet_weather() {
 	var params = {
 		// status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。")
 		status: '現在の気温' + temp[0] + '℃ '
-			+ '24H以内の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
+			+ '本日の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
 			+ '現在の風速' + wind[0] + 'm/s '
 			+ '現在の降水量' + rain[1] + 'mm '
 			+ moment().utc().add(9, 'h').format("MM月DD日 HH時mm分")
