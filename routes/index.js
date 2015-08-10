@@ -215,6 +215,8 @@ function get_weather(body) {
 				$(this).find('li').each(function(j, elem){
 					if ((myArray = regexp_rain.exec($(this).text())) !== null) {
 						rain[j] = myArray[1];
+					} else {
+						rain[j] = '--';
 					}
 				});
 				// console.log('現在の降水量' + rain[1] + 'mm');
