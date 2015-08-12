@@ -4,6 +4,7 @@ var router = express.Router();
 var CronJob         = require('cron').CronJob;
 var CronJobWet      = require('cron').CronJob;
 var CronJobForecast = require('cron').CronJob;
+var CronJobMention  = require('cron').CronJob;
 var moment  = require('moment');
 var fs      = require('fs');
 var request = require('request');
@@ -27,7 +28,8 @@ router.get('/', function(req, res, next) {
 
 var cronTime = process.env.cron || '0 0 6-10,22 * * *';
 var cronTimeWet = process.env.cronWet || '0 0 0-5,11-21,23 * * *';
-var cronTimeForecast = process.env.cronForecast || '0 0 22 * * *';
+var cronTimeForecast = process.env.cronForecast || '0 30 22 * * *';
+var cronTimeMention = process.env.cronMention || '0 50 23 * * *';
 var urlWet = "http://www.tenki.jp/amedas/9/46/86156.html";
 // var urlWet = "http://www.tenkiaaaaaa.jp/amedas/9/46/86156.html"; //DEBUG
 // var urlForecast = "http://www.tenki.jp/forecast/9/46/8620/43214.html";
@@ -38,6 +40,7 @@ var regexp_wind = /\D(\d+\.\d+)m\/s/;
 var regexp_wind_f = /.*(\d+).*/;
 var regexp_rain = /\D(\d+\.\d+)mm/;
 var regexp_wed_f = /\n(.+)/;
+var regexp_mention = /^\@unkaitter\s+(\d)/;
 var temp = [];
 var wind = [];
 var rain = [];
@@ -95,6 +98,21 @@ new CronJobForecast({
 			if (!err && res.statusCode == 200) {
 				get_forecast(body);
 				tweet_forecast();
+			} else {
+				console.error(err);
+			}
+		});
+	},
+	start: true
+});
+
+new CronJobMention({
+	cronTime: cronTimeMention,
+	onTick: function() {
+		logging_time();
+		request({url: urlWet}, function(err, res, body) {
+			if (!err && res.statusCode == 200) {
+				tweet_mention();
 			} else {
 				console.error(err);
 			}
@@ -237,6 +255,79 @@ function tweet_forecast() {
 	tweet_status_update(params);
 }
 
+var imgList = {};
+
+function tweet_mention() {
+	imgList = {};
+	var params = {
+		screen_name: 'unkaitter',
+		count: 30,
+		trim_user: true,
+		exclude_replies: true,
+		include_rts: true
+	};
+	Tw.get('statuses/user_timeline', params, function(err, data, response){
+		if (!err && response.statusCode == 200) {
+			data.forEach(function(elm, index, array){
+				// console.log('a[' + index + ']');
+				if ('extended_entities' in elm &&
+					is_today(elm.created_at)) {
+					set_img_list(elm);
+					// console.log(elm);
+				}
+			});
+			process_mention();
+		} else {
+			console.error(err);
+		}
+	});
+}
+
+function process_mention() {
+	var params = {
+		trim_user: true
+	};
+	Tw.get('statuses/mentions_timeline', params, function(err, data, response){
+		if (!err && response.statusCode == 200) {
+			data.forEach(function(elm, index, array){
+				if (is_today(elm.created_at) &&
+					elm.in_reply_to_status_id_str != 'null' &&
+					elm.in_reply_to_status_id_str in imgList &&
+					(myArray = regexp_mention.exec(elm.text)) !== null) {
+					//
+					if (myArray[1] == '1') {
+						imgList[elm.in_reply_to_status_id_str].count_ok += 1;
+					} else {
+						imgList[elm.in_reply_to_status_id_str].count_ng += 1;
+					}
+				}
+			});
+			var hours = '';
+			for (i in imgList) {
+				if (imgList[i].count_ok > 0) {
+					if (hours == '') {
+						hours = imgList[i].hour;
+					} else {
+						hours = imgList[i].hour + ',' + hours;
+					}
+				}
+			}
+			var st = '';
+			if (hours != '') {
+				st = '雲海が本日' + hours + '時に見えました';
+			} else {
+				st = '雲海は本日見えませんでした'
+			}
+			var param_update = {
+				status: '[集計] ' + st + ' ' + get_time_now()
+			};
+			tweet_status_update(param_update);
+		} else {
+			console.error(err);
+		}
+	});
+}
+
 function tweet_status_update(params) {
 	var debug = process.env.debug || 0;
 	if (debug) {
@@ -250,6 +341,20 @@ function tweet_status_update(params) {
 
 function get_time_now() {
 	return moment().utc().add(9, 'h').format("MM月DD日 HH時mm分");
+}
+
+function is_today(created) {
+	date = new Date(created);
+	today = new Date();
+	return date.getDate() == today.getDate();
+}
+function set_img_list(data) {
+	date = new Date(data.created_at);
+	imgList[data.id_str] = {
+		hour: date.getHours(),
+		count_ok: 0,
+		count_ng: 0
+	};
 }
 
 module.exports = router;
