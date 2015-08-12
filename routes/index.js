@@ -304,7 +304,7 @@ function process_mention() {
 			});
 			var hours = '';
 			for (i in imgList) {
-				if (imgList[i].count_ok > 0) {
+				if (imgList[i].count_ok > imgList[i].count_ng) {
 					if (hours == '') {
 						hours = imgList[i].hour;
 					} else {
