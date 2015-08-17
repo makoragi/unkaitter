@@ -40,7 +40,7 @@ var regexp_wind = /\D(\d+\.\d+)m\/s/;
 var regexp_wind_f = /.*(\d+).*/;
 var regexp_rain = /\D(\d+\.\d+)mm/;
 var regexp_wed_f = /\n(.+)/;
-var regexp_mention = /^\@unkaitter\s+(\d)/;
+var regexp_mention = /^\@unkaitterbot\s+(\d)/;
 var temp = [];
 var wind = [];
 var rain = [];
@@ -260,7 +260,7 @@ var imgList = {};
 function tweet_mention() {
 	imgList = {};
 	var params = {
-		screen_name: 'unkaitter',
+		screen_name: 'unkaitterbot',
 		count: 30,
 		trim_user: true,
 		exclude_replies: true,
