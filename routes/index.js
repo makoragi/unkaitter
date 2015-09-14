@@ -196,6 +196,8 @@ function get_weather(body) {
 				$(this).find('li').each(function(j, elem){
 					if ((myArray = regexp_temp.exec($(this).text())) !== null) {
 						temp[j] = myArray[1];
+					} else {
+						temp[j] = '--';
 					}
 				});
 				// console.log('現在の気温' + temp[0] + '℃');
@@ -206,6 +208,8 @@ function get_weather(body) {
 				$(this).find('li').each(function(j, elem){
 					if ((myArray = regexp_wind.exec($(this).text())) !== null) {
 						wind[j] = myArray[1];
+					} else {
+						wind[j] = '--';
 					}
 				});
 				// console.log('現在の風速' + wind[0] + 'm/s');
@@ -229,7 +233,6 @@ function tweet_weather() {
 	var params = {
 		// status: moment().utc().add(9, 'h').format("ただいま MM月DD日 HH時mm分です。")
 		status: '現在の気温' + temp[0] + '℃ '
-			+ '本日の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
 			+ '現在の風速' + wind[0] + 'm/s '
 			+ '現在の降水量' + rain[1] + 'mm '
 			+ moment().utc().add(9, 'h').format("MM月DD日 HH時mm分")
@@ -273,6 +276,8 @@ function get_forecast(body) {
 				if ((myArray = regexp_wed_f.exec($(this).text())) !== null) {
 					// console.log(myArray[1]);
 					wed_f[i] = myArray[1];
+				} else {
+					wed_f[i] = '--';
 				}
 			} else if (itr == 2) {
 				// console.log(i + ':' + $(this).text());
@@ -282,6 +287,8 @@ function get_forecast(body) {
 				if ((myArray = regexp_wind_f.exec($(this).text())) !== null) {
 					// console.log(myArray[1]);
 					wind_f[i] = myArray[1];
+				} else {
+					wind_f[i] = '--';
 				}
 			}
 		});
