@@ -164,6 +164,8 @@ function get_weather(body) {
 				$(this).find('li').each(function(j, elem){
 					if ((myArray = regexp_temp.exec($(this).text())) !== null) {
 						temp[j] = myArray[1];
+					} else {
+						temp[j] = '--';
 					}
 				});
 			} else if (i == 1 && $(this).prev().text() == '風向・風速') {
@@ -171,6 +173,8 @@ function get_weather(body) {
 				$(this).find('li').each(function(j, elem){
 					if ((myArray = regexp_wind.exec($(this).text())) !== null) {
 						wind[j] = myArray[1];
+					} else {
+						wind[j] = '--';
 					}
 				});
 			} else if (i == 1 && $(this).prev().text() == '降水量') {
@@ -230,12 +234,16 @@ function get_forecast(body) {
 			if (itr == 1) {
 				if ((myArray = regexp_wed_f.exec($(this).text())) !== null) {
 					wed_f[i] = myArray[1];
+				} else {
+					wed_f[i] = '--';
 				}
 			} else if (itr == 2) {
 				temp_f[i] = $(this).text();
 			} else if (itr == 5) {
 				if ((myArray = regexp_wind_f.exec($(this).text())) !== null) {
 					wind_f[i] = myArray[1];
+				} else {
+					wind_f[i] = '--';
 				}
 			}
 		});
