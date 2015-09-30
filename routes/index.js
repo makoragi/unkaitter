@@ -30,7 +30,8 @@ var cronTime = process.env.cron || '0 0 6-10,22 * * *';
 var cronTimeWet = process.env.cronWet || '0 0 0-5,11-21,23 * * *';
 var cronTimeForecast = process.env.cronForecast || '0 30 22 * * *';
 var cronTimeMention = process.env.cronMention || '0 50 23 * * *';
-var urlWet = "http://www.tenki.jp/amedas/9/46/86156.html";
+//var urlWet = "http://www.tenki.jp/amedas/9/46/86156.html"; //阿蘇山
+var urlWet = "http://www.tenki.jp/amedas/9/46/86111.html"; //阿蘇乙姫
 // var urlWet = "http://www.tenkiaaaaaa.jp/amedas/9/46/86156.html"; //DEBUG
 // var urlForecast = "http://www.tenki.jp/forecast/9/46/8620/43214.html";
 var urlForecast = "http://weather.yahoo.co.jp/weather/jp/43/8620/43214.html";
@@ -138,10 +139,10 @@ function tweet_image() {
 				var mediaIdStr = data.media_id_string;
 				var params = {
 					status: '現在の気温' + temp[0] + '℃ '
-						+ '本日の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
 						+ '現在の風速' + wind[0] + 'm/s '
 						+ '現在の降水量' + rain[1] + 'mm '
-						+ get_time_now(),
+						+ get_time_now()
+						+ ' [阿蘇山(標高1142m)観測不能のため阿蘇乙姫(標高497m)を測定]',
 					media_ids: [mediaIdStr]
 				};
 				tweet_status_update(params);
@@ -189,10 +190,10 @@ function get_weather(body) {
 function tweet_weather() {
 	var params = {
 		status: '現在の気温' + temp[0] + '℃ '
-			+ '本日の温度差' + (temp[1] - temp[2]).toFixed(1) + '℃ '
 			+ '現在の風速' + wind[0] + 'm/s '
 			+ '現在の降水量' + rain[1] + 'mm '
 			+ get_time_now()
+			+ ' [阿蘇山(標高1142m)観測不能のため阿蘇乙姫(標高497m)を測定]'
 	};
 	tweet_status_update(params);
 }
