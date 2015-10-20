@@ -216,7 +216,7 @@ function get_forecast(body) {
 			//// <th> or <td>
 			if (itr == 2 && i != 0) {
 				// console.log(i + ':' + $(this).text());
-				if (Number(temp_f_max) < Number($(this).text()) {
+				if (Number(temp_f_max) < Number($(this).text())) {
 					temp_f_max = $(this).text();
 					console.log(' max:' + $(this).text());
 				}
