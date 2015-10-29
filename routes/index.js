@@ -264,10 +264,10 @@ function tweet_forecast() {
 	tweet_status_update(params);
 }
 
-var imgList = {};
+var imgList = [];
 
 function tweet_mention() {
-	imgList = {};
+	imgList = [];
 	var params = {
 		screen_name: 'unkaitterbot',
 		count: 30,
@@ -304,32 +304,48 @@ function process_mention() {
 					elm.in_reply_to_status_id_str in imgList &&
 					(myArray = regexp_mention.exec(elm.text)) !== null) {
 					//
-					if (myArray[1] == '1') {
+					if (myArray[1] == '2') {
+						imgList[elm.in_reply_to_status_id_str].count_fail += 1;
+					} else if (myArray[1] == '1') {
 						imgList[elm.in_reply_to_status_id_str].count_ok += 1;
 					} else {
 						imgList[elm.in_reply_to_status_id_str].count_ng += 1;
 					}
 				}
 			});
-			var hours = '';
+			// ソートする なんかコレじゃない感も
+			imgList.sort(function(a,b){
+				var aHour = a[hour];
+				var bHour = b[hour];
+				if (aHour < bHour) return 1;
+				if (aHour > bHour) return -1;
+				return 0;
+			});
+			// 出た時刻を集計する
+			var summary = '';
+			var detail = '';
 			for (i in imgList) {
-				if (imgList[i].count_ok > imgList[i].count_ng) {
-					if (hours == '') {
-						hours = imgList[i].hour;
-					} else {
-						hours = imgList[i].hour + ',' + hours;
-					}
+				// サマリ
+				summary += imgList[i].hour + '時';
+				if (imgList[i].count_fail > 0) {
+					summary += '－'; //2
+				} else if (imgList[i].count_ok > imgList[i].count_ng) {
+					summary += '○'; //1
+				} else {
+					summary += '×'; //0
 				}
+				summary += ',';
+				// 詳細
+				detail += imgList[i].hour + '時['
+					+ imgList[i].count_ng + ','
+					+ imgList[i].count_ok + ','
+					+ imgList[i].count_fail + '],';
 			}
-			var st = '';
-			if (hours != '') {
-				st = '雲海が本日' + hours + '時に見えました';
-			} else {
-				st = '雲海は本日見えませんでした'
-			}
+			// ツイートする
 			var param_update = {
-				status: '[集計] ' + st + ' ' + get_time_now()
+				status: '[集計] ' + summary + ',時刻[個数:0→1→2の順],' + detail + ' ' + get_time_now()
 			};
+			//console.log(param_update); //DEBUG
 			tweet_status_update(param_update);
 		} else {
 			console.error(err);
@@ -361,6 +377,7 @@ function set_img_list(data) {
 	date = new Date(data.created_at);
 	imgList[data.id_str] = {
 		hour: date.getHours(),
+		count_fail: 0,
 		count_ok: 0,
 		count_ng: 0
 	};
