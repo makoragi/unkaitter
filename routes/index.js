@@ -4,7 +4,6 @@ var router = express.Router();
 var CronJob         = require('cron').CronJob;
 var CronJobWet      = require('cron').CronJob;
 var CronJobForecast = require('cron').CronJob;
-var CronJobMention  = require('cron').CronJob;
 var moment  = require('moment');
 var fs      = require('fs');
 var request = require('request');
@@ -26,22 +25,24 @@ router.get('/', function(req, res, next) {
   });
 });
 
+
+var debug = process.env.debug || 0;
+
 var cronTime = process.env.cron || '0 0 6-10,22 * * *';
 var cronTimeWet = process.env.cronWet || '0 0 0-5,11-21,23 * * *';
 var cronTimeForecast = process.env.cronForecast || '0 30 22 * * *';
-var cronTimeMention = process.env.cronMention || '0 50 23 * * *';
 //var urlWet = "http://www.tenki.jp/amedas/9/46/86156.html"; //阿蘇山
 var urlWet = "http://www.tenki.jp/amedas/9/46/86111.html"; //阿蘇乙姫
 // var urlWet = "http://www.tenkiaaaaaa.jp/amedas/9/46/86156.html"; //DEBUG
 // var urlForecast = "http://www.tenki.jp/forecast/9/46/8620/43214.html";
 var urlForecast = "http://weather.yahoo.co.jp/weather/jp/43/8620/43214.html";
-var urlCamera = 'http://today3.aso.ne.jp/SnapshotJPEG?Resolution=640x480&Quality=Clarity&View=Normal';
-var regexp_temp = /\D(\d+\.\d+)℃/;
+//var urlCamera = 'http://today3.aso.ne.jp/SnapshotJPEG?Resolution=640x480&Quality=Clarity&View=Normal';
+var urlCamera = 'http://www.webtv-aso.net/liveimg/image.jpg'
+var regexp_temp = /\D(\S*\d+\.\d+)℃/;
 var regexp_wind = /\D(\d+\.\d+)m\/s/;
 var regexp_wind_f = /.*(\d+).*/;
 var regexp_rain = /\D(\d+\.\d+)mm/;
 var regexp_wed_f = /\n(.+)/;
-var regexp_mention = /^\@unkaitterbot\s+(\d)/;
 var temp = [];
 var wind = [];
 var rain = [];
@@ -56,7 +57,7 @@ new CronJob({
 	cronTime: cronTime,
 	onTick: function() {
 		logging_time();
-		request({url: urlWet}, function(err, res, body) {
+		var req = request({uri:urlWet}, function(err, res, body) {
 			if (!err && res.statusCode == 200) {
 				get_weather(body);
 				var picStream = fs.createWriteStream(tempfile);
@@ -64,13 +65,24 @@ new CronJob({
 					tweet_image();
 				});
 				picStream.on('error', function(err){
-					console.error(err);
+					console.log(err);
+					tweet_weather();
+					//console.error(err);
 				});
-				request(urlCamera).pipe(picStream);
+				request.get(urlCamera)
+					.on('error', function(errCam){
+						console.log(err);
+						tweet_weather();
+					})
+					.pipe(picStream);
 			} else {
-				console.error(err);
+				console.log(err);
 			}
 		});
+		req.on('timeout', function(){
+			console.log('request time out.');
+		});
+		req.end();
 	},
 	start: true
 });
@@ -99,21 +111,6 @@ new CronJobForecast({
 			if (!err && res.statusCode == 200) {
 				get_forecast(body);
 				tweet_forecast();
-			} else {
-				console.error(err);
-			}
-		});
-	},
-	start: true
-});
-
-new CronJobMention({
-	cronTime: cronTimeMention,
-	onTick: function() {
-		logging_time();
-		request({url: urlWet}, function(err, res, body) {
-			if (!err && res.statusCode == 200) {
-				tweet_mention();
 			} else {
 				console.error(err);
 			}
@@ -155,17 +152,30 @@ function tweet_image() {
 
 function get_weather(body) {
 	var $ = cheerio.load(body);
-	$("table[class=amedas_table_current]").first().children().each(function(){
+	if (debug) {
+		//console.log(body);
+	}
+	//$("table[class=amedas-table-current]").first().children().each(function(){
+	$(".amedas-table-current").first().children().each(function(){
 		//// <tr>
+		if (debug) {
+			console.log($(this));
+		}
 		$(this).children().each(function(i, elem){
 			//// <th> or <td>
 			if (i == 1 && $(this).prev().text() == '気温') {
 				temp = [];
 				$(this).find('li').each(function(j, elem){
+					if (debug) {
+						console.log($(this).text);
+					}
 					if ((myArray = regexp_temp.exec($(this).text())) !== null) {
 						temp[j] = myArray[1];
 					} else {
 						temp[j] = '--';
+					}
+					if (debug) {
+						console.log(temp[j]);
 					}
 				});
 			} else if (i == 1 && $(this).prev().text() == '風向・風速') {
@@ -176,6 +186,10 @@ function get_weather(body) {
 					} else {
 						wind[j] = '--';
 					}
+					if (debug) {
+						console.log(wind[j]);
+					}
+					
 				});
 			} else if (i == 1 && $(this).prev().text() == '降水量') {
 				rain = [];
@@ -184,6 +198,9 @@ function get_weather(body) {
 						rain[j] = myArray[1];
 					} else {
 						rain[j] = '--';
+					}
+					if (debug) {
+						console.log(rain[j]);
 					}
 				});
 			}
@@ -264,97 +281,7 @@ function tweet_forecast() {
 	tweet_status_update(params);
 }
 
-var imgList = [];
-
-function tweet_mention() {
-	imgList = [];
-	var params = {
-		screen_name: 'unkaitterbot',
-		count: 30,
-		trim_user: true,
-		exclude_replies: true,
-		include_rts: true
-	};
-	Tw.get('statuses/user_timeline', params, function(err, data, response){
-		if (!err && response.statusCode == 200) {
-			data.forEach(function(elm, index, array){
-				// console.log('a[' + index + ']');
-				if ('extended_entities' in elm &&
-					is_today(elm.created_at)) {
-					set_img_list(elm);
-					// console.log(elm);
-				}
-			});
-			process_mention();
-		} else {
-			console.error(err);
-		}
-	});
-}
-
-function process_mention() {
-	var params = {
-		trim_user: true
-	};
-	Tw.get('statuses/mentions_timeline', params, function(err, data, response){
-		if (!err && response.statusCode == 200) {
-			data.forEach(function(elm, index, array){
-				if (is_today(elm.created_at) &&
-					elm.in_reply_to_status_id_str != 'null' &&
-					elm.in_reply_to_status_id_str in imgList &&
-					(myArray = regexp_mention.exec(elm.text)) !== null) {
-					//
-					if (myArray[1] == '2') {
-						imgList[elm.in_reply_to_status_id_str].count_fail += 1;
-					} else if (myArray[1] == '1') {
-						imgList[elm.in_reply_to_status_id_str].count_ok += 1;
-					} else {
-						imgList[elm.in_reply_to_status_id_str].count_ng += 1;
-					}
-				}
-			});
-			// ソートする なんかコレじゃない感も
-			imgList.sort(function(a,b){
-				var aHour = a[hour];
-				var bHour = b[hour];
-				if (aHour < bHour) return 1;
-				if (aHour > bHour) return -1;
-				return 0;
-			});
-			// 出た時刻を集計する
-			var summary = '';
-			var detail = '';
-			for (i in imgList) {
-				// サマリ
-				summary += imgList[i].hour + '時';
-				if (imgList[i].count_fail > 0) {
-					summary += '－'; //2
-				} else if (imgList[i].count_ok > imgList[i].count_ng) {
-					summary += '○'; //1
-				} else {
-					summary += '×'; //0
-				}
-				summary += ',';
-				// 詳細
-				detail += imgList[i].hour + '時['
-					+ imgList[i].count_ng + ','
-					+ imgList[i].count_ok + ','
-					+ imgList[i].count_fail + '],';
-			}
-			// ツイートする
-			var param_update = {
-				status: '[集計] ' + summary + ',時刻[個数:0→1→2の順],' + detail + ' ' + get_time_now()
-			};
-			//console.log(param_update); //DEBUG
-			tweet_status_update(param_update);
-		} else {
-			console.error(err);
-		}
-	});
-}
-
 function tweet_status_update(params) {
-	var debug = process.env.debug || 0;
 	if (debug) {
 		console.log(params.status);
 	} else {
@@ -366,21 +293,6 @@ function tweet_status_update(params) {
 
 function get_time_now() {
 	return moment().utc().add(9, 'h').format("MM月DD日 HH時mm分");
-}
-
-function is_today(created) {
-	date = new Date(created);
-	today = new Date();
-	return date.getDate() == today.getDate();
-}
-function set_img_list(data) {
-	date = new Date(data.created_at);
-	imgList[data.id_str] = {
-		hour: date.getHours(),
-		count_fail: 0,
-		count_ok: 0,
-		count_ng: 0
-	};
 }
 
 module.exports = router;
